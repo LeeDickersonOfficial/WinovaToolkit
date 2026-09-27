@@ -11,9 +11,16 @@ const execFileAsync = promisify(execFile);
 
 let mainWindow;
 let cachedDeviceDetails;
+let updaterState = 'idle';
 
 function sendUpdateStatus(status, payload = {}) {
+  updaterState = status;
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update:status', { status, ...payload });
+}
+
+async function checkForUpdatesSafely() {
+  if (!app.isPackaged || ['checking', 'available', 'downloading', 'downloaded'].includes(updaterState)) return;
+  try { await autoUpdater.checkForUpdates(); } catch { /* surfaced by autoUpdater's error event */ }
 }
 
 function setupUpdater() {
@@ -64,6 +71,27 @@ function networkInterfaces() {
   );
 }
 
+async function windowsNetworkAdapters() {
+  const [{ stdout }, routeResult] = await Promise.all([
+    execFileAsync('netsh.exe', ['interface', 'show', 'interface'], { windowsHide: true, timeout: 10000 }),
+    execFileAsync('route.exe', ['print', '-4'], { windowsHide: true, timeout: 10000 }).catch(() => ({ stdout: '' }))
+  ]);
+  const addresses = os.networkInterfaces();
+  const gateways = new Map();
+  for (const line of routeResult.stdout.split(/\r?\n/)) {
+    const route = line.trim().match(/^0\.0\.0\.0\s+0\.0\.0\.0\s+(\S+)\s+(\S+)\s+\d+$/);
+    if (route && route[1] !== 'On-link') gateways.set(route[2], route[1]);
+  }
+  return stdout.split(/\r?\n/).map(line => line.match(/^\s*(Enabled|Disabled)\s+(Connected|Disconnected)\s+\S+\s+(.+?)\s*$/i)).filter(Boolean).map(match => {
+    const name = match[3];
+    const details = addresses[name] || [];
+    const mac = details.find(item => item.mac && item.mac !== '00:00:00:00:00:00')?.mac || '—';
+    const ipv4 = details.filter(item => item.family === 'IPv4').map(item => item.address);
+    const gateway = ipv4.map(address => gateways.get(address)).find(Boolean) || '—';
+    return { name, description: 'Windows network adapter', status: match[1].toLowerCase() === 'disabled' ? 'Disabled' : match[2], mac, ipv4, gateway, speed: '—', virtual: /tailscale|vpn|virtual|vethernet|loopback/i.test(name) };
+  });
+}
+
 ipcMain.handle('system:snapshot', async () => ({
   hostname: os.hostname(),
   platform: `${os.type()} ${os.release()}`,
@@ -82,6 +110,19 @@ ipcMain.handle('system:details', async () => {
   const script = `$cs=Get-CimInstance Win32_ComputerSystem;$os=Get-CimInstance Win32_OperatingSystem;$bios=Get-CimInstance Win32_BIOS;$gpu=Get-CimInstance Win32_VideoController|Select-Object -First 1;$board=Get-CimInstance Win32_BaseBoard|Select-Object -First 1;$disks=Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3"|ForEach-Object {@{name=$_.DeviceID;label=$_.VolumeName;size=[double]$_.Size;free=[double]$_.FreeSpace}};@{manufacturer=$cs.Manufacturer;model=$cs.Model;windows=$os.Caption;build=$os.BuildNumber;installed=$os.InstallDate.ToString('o');lastBoot=$os.LastBootUpTime.ToString('o');bios=$bios.SMBIOSBIOSVersion;board=($board.Manufacturer+' '+$board.Product).Trim();gpu=$gpu.Name;gpuMemory=[double]$gpu.AdapterRAM;disks=@($disks)}|ConvertTo-Json -Depth 4 -Compress`;
   cachedDeviceDetails = JSON.parse(await runPowerShell(script));
   return cachedDeviceDetails;
+});
+ipcMain.handle('network:adapters', async () => {
+  return windowsNetworkAdapters();
+});
+ipcMain.handle('network:toggle-adapter', async (_event, { name, enabled }) => {
+  const adapters = await windowsNetworkAdapters();
+  const selected = adapters.find(item => item.name === String(name));
+  if (!selected) throw new Error('Network adapter was not found');
+  const safeName = selected.name.replace(/'/g, "''");
+  const adminState = enabled ? 'enabled' : 'disabled';
+  const outer = `$p=Start-Process netsh.exe -Verb RunAs -WindowStyle Hidden -ArgumentList @('interface','set','interface','name="${safeName}"','admin=${adminState}') -Wait -PassThru;if($p.ExitCode -ne 0){throw 'Windows did not apply the adapter change'}`;
+  await runPowerShell(outer, 60000);
+  return true;
 });
 
 ipcMain.handle('clipboard:read', () => clipboard.readText());
@@ -150,7 +191,8 @@ ipcMain.handle('shell:openExternal', (_event, url) => {
 });
 ipcMain.handle('update:check', async () => {
   if (!app.isPackaged) return { development: true, version: app.getVersion() };
-  await autoUpdater.checkForUpdates();
+  updaterState = 'idle';
+  await checkForUpdatesSafely();
   return { started: true };
 });
 ipcMain.handle('update:download', async () => { await autoUpdater.downloadUpdate(); return true; });
@@ -160,7 +202,8 @@ app.whenReady().then(() => {
   nativeTheme.themeSource = 'dark';
   setupUpdater();
   createWindow();
-  setTimeout(() => { if (app.isPackaged) autoUpdater.checkForUpdates().catch(() => {}); }, 10000);
+  setTimeout(checkForUpdatesSafely, 3000);
+  setInterval(checkForUpdatesSafely, 60000);
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });

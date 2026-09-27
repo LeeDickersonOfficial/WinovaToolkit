@@ -22,7 +22,7 @@ The installer, portable executable, blockmap, and `latest.yml` update manifest a
 ## Publishing an update
 
 1. Increment the version in `package.json` using semantic versioning.
-2. Commit and tag the release, for example `v0.1.20`.
+2. Commit and tag the release, for example `v0.1.21`.
 3. Build with `npm run dist`.
 4. Create a public GitHub Release for the tag.
 5. Upload the `Winova-Toolkit-Setup` executable, its blockmap, and `latest.yml`.

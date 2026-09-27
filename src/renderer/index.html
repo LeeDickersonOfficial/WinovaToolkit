@@ -31,6 +31,7 @@
 
     <main>
       <header class="topbar"><div><span class="eyebrow" id="page-kicker">WORKSPACE</span><h1 id="page-title">Good evening</h1></div><div class="header-actions"><button class="search-trigger" id="search-trigger"><span>⌕</span> Find a tool <kbd>Ctrl K</kbd></button><button class="icon-button" id="refresh-btn" title="Refresh">↻</button><div class="avatar" id="avatar">U</div></div></header>
+      <div class="global-update-banner hidden" id="global-update-banner"><div class="update-badge-icon">↑</div><div><span>UPDATE AVAILABLE</span><strong id="global-update-title">A new Winova version is ready</strong></div><button id="global-update-open">View update</button></div>
 
       <section class="page active" id="page-dashboard">
         <div class="hero card">
@@ -78,6 +79,14 @@
 
       <section class="page" id="page-settings"><div class="page-intro"><span class="eyebrow">PREFERENCES</span><h2>Preferences</h2><p>Configure Winova's local productivity features.</p></div><div class="settings-list card"><div><div><strong>Dark-only interface</strong><small>Winova uses a consistent, high-contrast dark appearance.</small></div><span class="privacy-badge">✓ Active</span></div><div><div><strong>Automatic clipboard capture</strong><small>Watch for new text while the app is open.</small></div><label class="switch"><input id="clipboard-toggle" type="checkbox" checked><span></span></label></div><div><div><strong>Keep up to 25 clipboard items</strong><small>Older items are removed automatically.</small></div><span class="setting-value">25 items</span></div><div><div><strong>Local-first privacy</strong><small>Utility data is processed entirely on your machine.</small></div><span class="privacy-badge">✓ Enabled</span></div></div><article class="card update-card"><div class="update-copy"><span class="eyebrow">SOFTWARE UPDATE</span><h3 id="update-title">Winova Toolkit is up to date</h3><p id="update-message">Updates are checked automatically after launch.</p><div id="update-notes" class="update-notes hidden"><strong>What's new</strong><div id="update-notes-content"></div></div></div><div class="update-actions"><span id="update-progress"></span><button class="secondary" id="update-check">Check for updates</button><button class="primary hidden" id="update-download">Download update</button><button class="primary hidden" id="update-install">Restart and install</button></div></article></section>
     </main>
+  </div>
+  <div class="winova-modal-backdrop hidden" id="adapter-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="adapter-confirm-title">
+    <div class="winova-modal">
+      <div class="modal-warning-icon">!</div>
+      <div class="modal-copy"><span class="eyebrow">WINOVA TOOLKIT · NETWORK</span><h3 id="adapter-confirm-title">Disable network adapter?</h3><p id="adapter-confirm-message">This can immediately disconnect your PC from the network.</p></div>
+      <div class="modal-notice"><strong>Connection warning</strong><span>You may need another adapter or local access to turn this connection back on.</span></div>
+      <div class="modal-actions"><button class="secondary" id="adapter-confirm-cancel">Keep enabled</button><button class="danger-button" id="adapter-confirm-accept">Disable adapter</button></div>
+    </div>
   </div>
   <div class="command-backdrop" id="command-backdrop">
     <div class="command-menu" role="dialog" aria-modal="true" aria-label="Find a tool">

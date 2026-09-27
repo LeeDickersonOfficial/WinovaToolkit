@@ -1,6 +1,6 @@
 {
   "name": "winova-toolkit",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "description": "A polished Windows utility toolkit built with Electron.",
   "main": "src/main.js",
   "author": "Winova",

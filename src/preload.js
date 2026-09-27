@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('winova', {
   writeClipboard: text => ipcRenderer.invoke('clipboard:write', text),
   hash: (text, algorithm) => ipcRenderer.invoke('utility:hash', { text, algorithm }),
   lookup: host => ipcRenderer.invoke('network:lookup', host),
+  getNetworkAdapters: () => ipcRenderer.invoke('network:adapters'),
+  toggleNetworkAdapter: (name, enabled) => ipcRenderer.invoke('network:toggle-adapter', { name, enabled }),
   windowsAction: action => ipcRenderer.invoke('windows:action', action),
   openExternal: url => ipcRenderer.invoke('shell:openExternal', url),
   checksumFile: algorithm => ipcRenderer.invoke('file:checksum', algorithm),
