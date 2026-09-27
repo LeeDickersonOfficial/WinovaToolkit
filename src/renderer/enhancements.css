@@ -114,6 +114,7 @@ body.light .generated-value { background: #f7f8fb; }
 .adapter-copy span,.adapter-copy small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .adapter-copy span { margin-top: 5px; color: #9099ac; font: 9px "Segoe UI",sans-serif; }
 .adapter-copy small { margin-top: 5px; color: #687286; font: 9px "Cascadia Code",Consolas,monospace; }
+.adapter-copy small b { padding: 0; background: none; color: #7d879b; font: inherit; letter-spacing: .45px; }
 .adapter-network-details { display: grid !important; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 8px !important; margin-top: 9px; }
 .adapter-network-details span { min-width: 0; margin: 0; padding: 7px 9px; border: 1px solid rgba(139,92,246,.12); border-radius: 7px; background: rgba(139,92,246,.045); color: #c9cfe0; font: 9px "Cascadia Code",Consolas,monospace; }
 .adapter-network-details em { display: block; margin-bottom: 4px; color: #76629f; font: normal 700 7px "Segoe UI",sans-serif; letter-spacing: 1px; }
@@ -150,6 +151,8 @@ body.light .generated-value { background: #f7f8fb; }
 .toast.error:before { content: "!"; background: rgba(255,95,115,.16); color: #ff7b8c; }
 .toast.info { background: linear-gradient(135deg,#171b2d,#111522); border-color: rgba(139,92,246,.46); color: #e2d8ff; box-shadow: 0 18px 55px rgba(0,0,0,.45),0 0 28px rgba(139,92,246,.09); }
 .toast.info:before { content: "···"; background: rgba(139,92,246,.16); color: #b997ff; font-size: 11px; letter-spacing: -1px; }
+.compact-button { padding: 7px 10px; font-size: 9px; }
+.info-card dd { max-width: 62%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
 
 /* Network command center */
 .network-intro { display: flex; align-items: center; justify-content: space-between; gap: 24px; }

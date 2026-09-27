@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.1.22
+
+- Added a clear MAC Address label to every network adapter.
+- Changed both the full-check DNS target and the manual lookup preview to `google.com`; the manual input is no longer pre-filled.
+- Added Windows release information such as `25H2`, the complete OS build and revision, device serial number, and last boot time.
+- Added a one-click system summary for copying useful device and Windows details.
+- Fixed the Software Update panel so “up to date” always reports the version currently installed and running.
+- Improved Programs and Features metadata with a clearer product description, publisher information, project links, and display name.
+
 ## v0.1.21
 
 - Added a dedicated, narrowly scoped Windows service for network-adapter changes.

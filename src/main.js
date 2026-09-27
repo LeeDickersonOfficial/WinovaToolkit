@@ -33,7 +33,7 @@ function setupUpdater() {
     const rawNotes = Array.isArray(info.releaseNotes) ? info.releaseNotes.map(item => item.note).filter(Boolean).join('\n\n') : info.releaseNotes;
     sendUpdateStatus('available', { version: info.version, releaseNotes: rawNotes || 'See the GitHub release page for details.' });
   });
-  autoUpdater.on('update-not-available', info => sendUpdateStatus('current', { version: info.version || app.getVersion() }));
+  autoUpdater.on('update-not-available', () => sendUpdateStatus('current', { version: app.getVersion() }));
   autoUpdater.on('download-progress', progress => sendUpdateStatus('downloading', { percent: Math.round(progress.percent) }));
   autoUpdater.on('update-downloaded', info => sendUpdateStatus('downloaded', { version: info.version }));
   autoUpdater.on('error', error => sendUpdateStatus('error', { message: error.message.replace(/https?:\/\/[^\s]+/g, 'update service') }));
@@ -156,7 +156,7 @@ ipcMain.handle('system:snapshot', async () => ({
 }));
 ipcMain.handle('system:details', async () => {
   if (cachedDeviceDetails) return cachedDeviceDetails;
-  const script = `$cs=Get-CimInstance Win32_ComputerSystem;$os=Get-CimInstance Win32_OperatingSystem;$bios=Get-CimInstance Win32_BIOS;$gpu=Get-CimInstance Win32_VideoController|Select-Object -First 1;$board=Get-CimInstance Win32_BaseBoard|Select-Object -First 1;$disks=Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3"|ForEach-Object {@{name=$_.DeviceID;label=$_.VolumeName;size=[double]$_.Size;free=[double]$_.FreeSpace}};@{manufacturer=$cs.Manufacturer;model=$cs.Model;windows=$os.Caption;build=$os.BuildNumber;installed=$os.InstallDate.ToString('o');lastBoot=$os.LastBootUpTime.ToString('o');bios=$bios.SMBIOSBIOSVersion;board=($board.Manufacturer+' '+$board.Product).Trim();gpu=$gpu.Name;gpuMemory=[double]$gpu.AdapterRAM;disks=@($disks)}|ConvertTo-Json -Depth 4 -Compress`;
+  const script = `$cs=Get-CimInstance Win32_ComputerSystem;$os=Get-CimInstance Win32_OperatingSystem;$bios=Get-CimInstance Win32_BIOS;$gpu=Get-CimInstance Win32_VideoController|Select-Object -First 1;$board=Get-CimInstance Win32_BaseBoard|Select-Object -First 1;$cv=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion';$displayVersion=if($cv.DisplayVersion){$cv.DisplayVersion}else{$cv.ReleaseId};$fullBuild=if($cv.UBR -ne $null){$os.BuildNumber+'.'+$cv.UBR}else{$os.BuildNumber};$disks=Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3"|ForEach-Object {@{name=$_.DeviceID;label=$_.VolumeName;size=[double]$_.Size;free=[double]$_.FreeSpace}};@{manufacturer=$cs.Manufacturer;model=$cs.Model;systemType=$cs.SystemType;hypervisor=[bool]$cs.HypervisorPresent;windows=$os.Caption;edition=$cv.EditionID;displayVersion=$displayVersion;build=$fullBuild;osVersion=$os.Version;installed=$os.InstallDate.ToString('o');lastBoot=$os.LastBootUpTime.ToString('o');serial=$bios.SerialNumber;bios=$bios.SMBIOSBIOSVersion;biosDate=if($bios.ReleaseDate){$bios.ReleaseDate.ToString('o')}else{$null};board=($board.Manufacturer+' '+$board.Product).Trim();gpu=$gpu.Name;gpuMemory=[double]$gpu.AdapterRAM;disks=@($disks)}|ConvertTo-Json -Depth 4 -Compress`;
   cachedDeviceDetails = JSON.parse(await runPowerShell(script));
   return cachedDeviceDetails;
 });
@@ -176,9 +176,9 @@ ipcMain.handle('network:health', async () => {
   const [gatewayTest, internetTest, dnsTest] = await Promise.all([
     gateway ? pingHost(gateway) : Promise.resolve({ reachable: false, latency: null }),
     pingHost('1.1.1.1'),
-    (async () => { const started = performance.now(); try { await dns.lookup('example.com'); return { reachable: true, latency: Math.max(1, Math.round(performance.now() - started)) }; } catch { return { reachable: false, latency: null }; } })()
+    (async () => { const started = performance.now(); try { await dns.lookup('google.com'); return { reachable: true, latency: Math.max(1, Math.round(performance.now() - started)) }; } catch { return { reachable: false, latency: null }; } })()
   ]);
-  return { checkedAt: Date.now(), gateway: { target: gateway || 'Not detected', ...gatewayTest }, internet: { target: '1.1.1.1', ...internetTest }, dns: { target: 'example.com', ...dnsTest } };
+  return { checkedAt: Date.now(), gateway: { target: gateway || 'Not detected', ...gatewayTest }, internet: { target: '1.1.1.1', ...internetTest }, dns: { target: 'google.com', ...dnsTest } };
 });
 ipcMain.handle('network:repair', async (_event, { action, name }) => {
   const allowed = new Set(['flushDns', 'renewDhcp', 'restartAdapter']);

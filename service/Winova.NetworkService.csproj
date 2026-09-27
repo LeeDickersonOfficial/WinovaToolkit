@@ -8,7 +8,7 @@
     <PublishTrimmed>true</PublishTrimmed>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <AssemblyName>Winova.NetworkService</AssemblyName>
-    <Version>0.1.21</Version>
+    <Version>0.1.22</Version>
     <RootNamespace>Winova.NetworkService</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

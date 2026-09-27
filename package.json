@@ -1,10 +1,13 @@
 {
   "name": "winova-toolkit",
-  "version": "0.1.21",
-  "description": "A polished Windows utility toolkit built with Electron.",
+  "version": "0.1.22",
+  "description": "A modern, privacy-first Windows toolkit for system insights, network diagnostics, productivity utilities, and everyday PC maintenance.",
   "main": "src/main.js",
   "author": "Winova",
   "license": "MIT",
+  "copyright": "Copyright © 2026 Winova",
+  "homepage": "https://github.com/LeeDickersonOfficial/WinovaToolkit",
+  "bugs": { "url": "https://github.com/LeeDickersonOfficial/WinovaToolkit/issues" },
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
@@ -27,7 +30,7 @@
     "extraResources": [{ "from": "service/publish/Winova.NetworkService.exe", "to": "service/Winova.NetworkService.exe" }],
     "publish": [{ "provider": "github", "owner": "LeeDickersonOfficial", "repo": "WinovaToolkit", "releaseType": "release" }],
     "win": { "target": ["nsis", "portable"] },
-    "nsis": { "artifactName": "Winova-Toolkit-Setup-${version}-${arch}.${ext}", "oneClick": false, "perMachine": true, "allowElevation": true, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true, "include": "build/installer.nsh" },
+    "nsis": { "artifactName": "Winova-Toolkit-Setup-${version}-${arch}.${ext}", "uninstallDisplayName": "Winova Toolkit", "oneClick": false, "perMachine": true, "allowElevation": true, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true, "include": "build/installer.nsh" },
     "portable": { "artifactName": "Winova-Toolkit-Portable-${version}-${arch}.${ext}" }
   }
 }
