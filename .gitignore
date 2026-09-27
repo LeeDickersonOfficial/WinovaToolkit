@@ -1,8 +1,10 @@
 node_modules/
 release/
 dist/
+service/bin/
+service/obj/
+service/publish/
 *.log
 .env
 .env.*
 !.env.example
-

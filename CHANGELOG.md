@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.1.21
+
+- Added a dedicated, narrowly scoped Windows service for network-adapter changes.
+- Removed repeated elevation prompts for adapter controls in installed copies.
+- Restricted service requests to the installed Winova Toolkit executable and validated every adapter name before making changes.
+- Kept per-action Windows elevation as a safe fallback for portable copies and unavailable services.
+- Added a network command center with gateway, DNS, and internet health checks.
+- Added safe DNS-cache flush, DHCP renewal, and adapter restart actions.
+- Added post-action adapter-state verification before reporting success.
+- Added service health and version information to Network and Preferences.
+- Added copy controls for adapter IP addresses and gateways.
+- Added loading skeletons, clearer adapter states, and richer success, progress, and error notifications.
+
 ## v0.1.20
 
 - Added automatic update checks shortly after launch and every 60 seconds.

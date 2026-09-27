@@ -1,6 +1,6 @@
 {
   "name": "winova-toolkit",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "description": "A polished Windows utility toolkit built with Electron.",
   "main": "src/main.js",
   "author": "Winova",
@@ -8,8 +8,9 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder --win"
+    "build:service": "dotnet publish service/Winova.NetworkService.csproj -c Release -o service/publish",
+    "pack": "npm run build:service && electron-builder --dir",
+    "dist": "npm run build:service && electron-builder --win"
   },
   "devDependencies": {
     "electron": "^39.2.7",
@@ -23,9 +24,10 @@
     "productName": "Winova Toolkit",
     "directories": { "output": "release" },
     "files": ["src/**/*", "package.json"],
+    "extraResources": [{ "from": "service/publish/Winova.NetworkService.exe", "to": "service/Winova.NetworkService.exe" }],
     "publish": [{ "provider": "github", "owner": "LeeDickersonOfficial", "repo": "WinovaToolkit", "releaseType": "release" }],
     "win": { "target": ["nsis", "portable"] },
-    "nsis": { "artifactName": "Winova-Toolkit-Setup-${version}-${arch}.${ext}", "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true },
+    "nsis": { "artifactName": "Winova-Toolkit-Setup-${version}-${arch}.${ext}", "oneClick": false, "perMachine": true, "allowElevation": true, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true, "include": "build/installer.nsh" },
     "portable": { "artifactName": "Winova-Toolkit-Portable-${version}-${arch}.${ext}" }
   }
 }

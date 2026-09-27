@@ -4,6 +4,7 @@ const os = require('os');
 const fs = require('fs');
 const dns = require('dns').promises;
 const crypto = require('crypto');
+const net = require('net');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 const { autoUpdater } = require('electron-updater');
@@ -92,6 +93,54 @@ async function windowsNetworkAdapters() {
   });
 }
 
+function requestNetworkService(action, name = '', enabled = false) {
+  return new Promise((resolve, reject) => {
+    const socket = net.createConnection('\\\\.\\pipe\\WinovaToolkitNetwork.v1');
+    let response = '';
+    let settled = false;
+    const finish = (error, result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      socket.destroy();
+      error ? reject(error) : resolve(result);
+    };
+    const timer = setTimeout(() => finish(new Error('Winova network service did not respond')), action === 'getStatus' ? 3000 : 65000);
+    socket.setEncoding('utf8');
+    socket.on('connect', () => socket.write(`${JSON.stringify({ Action: action, Name: name, Enabled: enabled })}\n`));
+    socket.on('data', chunk => {
+      response += chunk;
+      if (!response.includes('\n')) return;
+      try {
+        const result = JSON.parse(response.split('\n')[0]);
+        const ok = result.Ok ?? result.ok;
+        if (!ok) throw new Error(result.Error || result.error || 'The network service rejected the request');
+        finish(null, result);
+      } catch (error) { finish(error); }
+    });
+    socket.on('error', error => finish(error));
+    socket.on('end', () => { if (!settled) finish(new Error('Winova network service closed unexpectedly')); });
+  });
+}
+
+async function pingHost(target) {
+  const started = performance.now();
+  try {
+    await execFileAsync('ping.exe', ['-n', '1', '-w', '1800', target], { windowsHide: true, timeout: 3500 });
+    return { reachable: true, latency: Math.max(1, Math.round(performance.now() - started)) };
+  } catch { return { reachable: false, latency: null }; }
+}
+
+async function verifyAdapterState(name, enabled) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const current = (await windowsNetworkAdapters()).find(item => item.name === name);
+    const isEnabled = current && String(current.status).toLowerCase() !== 'disabled';
+    if (Boolean(isEnabled) === enabled) return current;
+    await new Promise(resolve => setTimeout(resolve, 350));
+  }
+  throw new Error('Windows did not confirm the adapter state');
+}
+
 ipcMain.handle('system:snapshot', async () => ({
   hostname: os.hostname(),
   platform: `${os.type()} ${os.release()}`,
@@ -114,15 +163,47 @@ ipcMain.handle('system:details', async () => {
 ipcMain.handle('network:adapters', async () => {
   return windowsNetworkAdapters();
 });
+ipcMain.handle('network:service-status', async () => {
+  try {
+    const result = await requestNetworkService('getStatus');
+    return { available: true, version: result.Version || result.version || app.getVersion(), mode: 'Installed service' };
+  } catch { return { available: false, version: null, mode: app.isPackaged ? 'Elevation fallback' : 'Development mode' }; }
+});
+ipcMain.handle('network:health', async () => {
+  const adapters = await windowsNetworkAdapters();
+  const active = adapters.find(item => String(item.status).toLowerCase() === 'connected' && item.gateway !== '—');
+  const gateway = active?.gateway && active.gateway !== '—' ? active.gateway : null;
+  const [gatewayTest, internetTest, dnsTest] = await Promise.all([
+    gateway ? pingHost(gateway) : Promise.resolve({ reachable: false, latency: null }),
+    pingHost('1.1.1.1'),
+    (async () => { const started = performance.now(); try { await dns.lookup('example.com'); return { reachable: true, latency: Math.max(1, Math.round(performance.now() - started)) }; } catch { return { reachable: false, latency: null }; } })()
+  ]);
+  return { checkedAt: Date.now(), gateway: { target: gateway || 'Not detected', ...gatewayTest }, internet: { target: '1.1.1.1', ...internetTest }, dns: { target: 'example.com', ...dnsTest } };
+});
+ipcMain.handle('network:repair', async (_event, { action, name }) => {
+  const allowed = new Set(['flushDns', 'renewDhcp', 'restartAdapter']);
+  if (!allowed.has(action)) throw new Error('Unsupported network repair action');
+  if (action === 'restartAdapter') {
+    const selected = (await windowsNetworkAdapters()).find(item => item.name === String(name));
+    if (!selected) throw new Error('Choose a valid network adapter');
+    await requestNetworkService(action, selected.name);
+  } else await requestNetworkService(action);
+  return true;
+});
 ipcMain.handle('network:toggle-adapter', async (_event, { name, enabled }) => {
   const adapters = await windowsNetworkAdapters();
   const selected = adapters.find(item => item.name === String(name));
   if (!selected) throw new Error('Network adapter was not found');
-  const safeName = selected.name.replace(/'/g, "''");
-  const adminState = enabled ? 'enabled' : 'disabled';
-  const outer = `$p=Start-Process netsh.exe -Verb RunAs -WindowStyle Hidden -ArgumentList @('interface','set','interface','name="${safeName}"','admin=${adminState}') -Wait -PassThru;if($p.ExitCode -ne 0){throw 'Windows did not apply the adapter change'}`;
-  await runPowerShell(outer, 60000);
-  return true;
+  try {
+    await requestNetworkService('setAdapterState', selected.name, Boolean(enabled));
+  } catch {
+    const safeName = selected.name.replace(/'/g, "''");
+    const adminState = enabled ? 'enabled' : 'disabled';
+    const outer = `$p=Start-Process netsh.exe -Verb RunAs -WindowStyle Hidden -ArgumentList @('interface','set','interface','name="${safeName}"','admin=${adminState}') -Wait -PassThru;if($p.ExitCode -ne 0){throw 'Windows did not apply the adapter change'}`;
+    await runPowerShell(outer, 60000);
+  }
+  const current = await verifyAdapterState(selected.name, Boolean(enabled));
+  return { verified: true, status: current.status };
 });
 
 ipcMain.handle('clipboard:read', () => clipboard.readText());
