@@ -68,7 +68,12 @@ body.light .generated-value { background: #f7f8fb; }
 .drive-head { display: flex; justify-content: space-between; gap: 12px; font-size: 10px; }
 .drive-head span { color: var(--muted); }
 .drive .progress { margin-bottom: 5px; }
-.drive .progress i { background: linear-gradient(90deg,#4f8cff,#8b5cf6); }
+.drive.healthy .progress i { background: linear-gradient(90deg,#18b987,#43dfa9); box-shadow: 0 0 10px rgba(39,211,162,.2); }
+.drive.warning .progress i { background: linear-gradient(90deg,#e28b31,#ffb657); box-shadow: 0 0 10px rgba(255,159,67,.2); }
+.drive.critical .progress i { background: linear-gradient(90deg,#d94c62,#ff7182); box-shadow: 0 0 10px rgba(255,90,112,.22); }
+.drive.healthy .drive-head span { color: #4bdcb3; }
+.drive.warning .drive-head span { color: #ffb35f; }
+.drive.critical .drive-head span { color: #ff7888; }
 @media(max-width:1100px){.inventory-grid,.drive-list{grid-template-columns:1fr}}
 .update-card { margin-top: 14px; padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 25px; }
 .update-card h3 { margin: 5px 0; }
