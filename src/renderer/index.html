@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:;" />
+  <title>Winova Toolkit</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="enhancements.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">W</span><span>Winova</span><small>TOOLKIT</small></div>
+      <nav id="nav">
+        <button class="nav-item active" data-page="dashboard"><span>⌂</span>Overview</button>
+        <p class="nav-label">TOOLS</p>
+        <button class="nav-item" data-page="clipboard"><span>▣</span>Clipboard</button>
+        <button class="nav-item" data-page="text"><span>¶</span>Text studio</button>
+        <button class="nav-item" data-page="developer"><span>&lt;/&gt;</span>Developer</button>
+        <button class="nav-item" data-page="generate"><span>✦</span>Generators</button>
+        <button class="nav-item" data-page="network"><span>◎</span>Network</button>
+        <button class="nav-item" data-page="quick"><span>⚡</span>Quick actions</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="nav-item" data-page="settings"><span>⚙</span>Preferences</button>
+        <div class="status-pill"><i></i><div><strong>System ready</strong><small id="sidebar-device">Checking device…</small></div></div>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar"><div><span class="eyebrow" id="page-kicker">WORKSPACE</span><h1 id="page-title">Good evening</h1></div><div class="header-actions"><button class="search-trigger" id="search-trigger"><span>⌕</span> Find a tool <kbd>Ctrl K</kbd></button><button class="icon-button" id="refresh-btn" title="Refresh">↻</button><div class="avatar" id="avatar">U</div></div></header>
+
+      <section class="page active" id="page-dashboard">
+        <div class="hero card">
+          <div class="hero-copy"><span class="badge"><i></i> ALL SYSTEMS NORMAL</span><h2>Your Windows command center.</h2><p>Fast utilities, useful diagnostics, and everyday shortcuts—beautifully organized in one place.</p><button class="primary" data-goto="quick">Explore quick actions <span>→</span></button></div>
+          <div class="orb-wrap"><div class="orb"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><span>W</span></div></div>
+        </div>
+        <div class="section-heading"><div><span class="eyebrow">LIVE STATUS</span><h3>At a glance</h3></div><span class="muted" id="last-updated">Updating…</span></div>
+        <div class="metrics">
+          <article class="metric card"><div class="metric-icon purple">◫</div><span>MEMORY</span><strong id="memory-value">—</strong><div class="progress"><i id="memory-bar"></i></div><small id="memory-detail">Reading system…</small></article>
+          <article class="metric card"><div class="metric-icon blue">◉</div><span>PROCESSOR</span><strong id="cpu-value">—</strong><div class="chip-row"><b id="core-chip">— cores</b><b id="arch-chip">—</b></div><small id="cpu-detail">Reading processor…</small></article>
+          <article class="metric card"><div class="metric-icon green">⌁</div><span>UPTIME</span><strong id="uptime-value">—</strong><div class="pulse-line"><i></i><i></i><i></i><i></i><i></i><i></i></div><small>Since your last restart</small></article>
+          <article class="metric card"><div class="metric-icon orange">⌖</div><span>NETWORK</span><strong id="network-value">—</strong><div class="chip-row"><b class="online">● Connected</b></div><small id="network-detail">Finding adapter…</small></article>
+        </div>
+        <div class="dashboard-grid">
+          <article class="card info-card"><div class="section-heading compact"><div><span class="eyebrow">THIS PC</span><h3>Device details</h3></div></div><dl><div><dt>Device name</dt><dd id="device-name">—</dd></div><div><dt>Windows</dt><dd id="platform">—</dd></div><div><dt>User</dt><dd id="user-name">—</dd></div><div><dt>App version</dt><dd id="app-version">—</dd></div></dl></article>
+          <article class="card activity-card"><span class="eyebrow">FAVORITES</span><h3>Jump right in</h3><div class="favorites"><button data-goto="clipboard"><span class="favorite-icon purple">▣</span><div><strong>Clipboard history</strong><small>Keep recent copies close</small></div><b>→</b></button><button data-goto="developer"><span class="favorite-icon blue">{ }</span><div><strong>JSON formatter</strong><small>Validate and beautify data</small></div><b>→</b></button><button data-goto="network"><span class="favorite-icon green">◎</span><div><strong>DNS lookup</strong><small>Resolve any hostname</small></div><b>→</b></button></div></article>
+        </div>
+        <div class="section-heading"><div><span class="eyebrow">HARDWARE & WINDOWS</span><h3>System inventory</h3></div><span class="muted">Loaded once per session</span></div>
+        <div class="inventory-grid">
+          <article class="card inventory-card"><div class="metric-icon purple">▰</div><div><span>COMPUTER</span><strong id="inventory-model">Loading…</strong><small id="inventory-manufacturer">Detecting manufacturer</small></div></article>
+          <article class="card inventory-card"><div class="metric-icon blue">◆</div><div><span>GRAPHICS</span><strong id="inventory-gpu">Loading…</strong><small id="inventory-vram">Detecting graphics memory</small></div></article>
+          <article class="card inventory-card"><div class="metric-icon green">⊞</div><div><span>WINDOWS EDITION</span><strong id="inventory-windows">Loading…</strong><small id="inventory-build">Detecting build</small></div></article>
+          <article class="card inventory-card"><div class="metric-icon orange">▦</div><div><span>BIOS & BOARD</span><strong id="inventory-bios">Loading…</strong><small id="inventory-board">Detecting mainboard</small></div></article>
+        </div>
+        <article class="card storage-card"><div class="card-head"><div><span class="eyebrow">LOCAL STORAGE</span><h3>Drive capacity</h3></div></div><div id="drive-list" class="drive-list"><div class="muted">Detecting drives…</div></div></article>
+      </section>
+
+      <section class="page" id="page-clipboard"><div class="page-intro"><span class="eyebrow">PRODUCTIVITY</span><h2>Clipboard history</h2><p>Recent text copied while Winova is open. Your history stays on this device.</p></div><div class="toolbar"><button class="primary" id="capture-clipboard">＋ Capture current clipboard</button><button class="secondary" id="clear-history">Clear history</button></div><div id="clipboard-list" class="list-stack"></div></section>
+
+      <section class="page" id="page-text"><div class="page-intro"><span class="eyebrow">WRITING TOOLS</span><h2>Text studio</h2><p>Clean, transform, and inspect text without uploading a thing.</p></div><div class="tool-grid"><article class="card editor-card"><div class="card-head"><h3>Input</h3><div class="counter"><span id="char-count">0</span> chars · <span id="word-count">0</span> words</div></div><textarea id="text-input" placeholder="Paste or type text here…"></textarea><div class="button-row"><button class="secondary text-action" data-action="upper">UPPERCASE</button><button class="secondary text-action" data-action="lower">lowercase</button><button class="secondary text-action" data-action="title">Title Case</button><button class="secondary text-action" data-action="trim">Clean spaces</button><button class="secondary text-action" data-action="sort">Sort lines</button><button class="secondary text-action" data-action="unique">Unique lines</button></div></article><article class="card stats-card"><span class="eyebrow">ANALYSIS</span><h3>Reading stats</h3><div class="big-stat"><strong id="read-time">0 sec</strong><span>estimated reading time</span></div><div class="stat-pairs"><div><span>Sentences</span><b id="sentence-count">0</b></div><div><span>Lines</span><b id="line-count">0</b></div><div><span>Bytes</span><b id="byte-count">0</b></div><div><span>Longest word</span><b id="longest-word">—</b></div></div></article></div></section>
+
+      <section class="page" id="page-developer"><div class="page-intro"><span class="eyebrow">DEVELOPER UTILITIES</span><h2>Developer toolbox</h2><p>Format JSON, encode text, and generate hashes locally.</p></div><div class="tabs"><button class="active" data-tooltab="json">JSON</button><button data-tooltab="base64">Base64</button><button data-tooltab="hash">Hash</button></div><article class="card dev-panel active" id="tooltab-json"><div class="card-head"><h3>JSON formatter & validator</h3><span class="validation" id="json-status">Waiting for input</span></div><textarea id="json-input" class="code" placeholder='{"hello":"world"}'></textarea><div class="button-row"><button class="primary" id="json-format">Format JSON</button><button class="secondary" id="json-minify">Minify</button><button class="secondary" id="json-copy">Copy result</button></div></article><article class="card dev-panel" id="tooltab-base64"><div class="card-head"><h3>Base64 encoder / decoder</h3></div><textarea id="base64-input" placeholder="Enter text or Base64…"></textarea><div class="button-row"><button class="primary" id="base64-encode">Encode</button><button class="secondary" id="base64-decode">Decode</button><button class="secondary" id="base64-copy">Copy result</button></div></article><article class="card dev-panel" id="tooltab-hash"><div class="card-head"><h3>Hash generator</h3><select id="hash-algorithm"><option value="sha256">SHA-256</option><option value="sha512">SHA-512</option><option value="sha1">SHA-1</option><option value="md5">MD5</option></select></div><textarea id="hash-input" placeholder="Enter text to hash…"></textarea><button class="primary" id="hash-generate">Generate hash</button><pre id="hash-output">Your hash will appear here</pre></article></section>
+
+      <section class="page" id="page-generate"><div class="page-intro"><span class="eyebrow">CREATE LOCALLY</span><h2>Smart generators</h2><p>Generate secure credentials and developer values without sending data anywhere.</p></div><div class="generator-grid"><article class="card generator-card"><div class="card-head"><div><span class="eyebrow">SECURITY</span><h3>Password generator</h3></div><span class="metric-icon purple">✦</span></div><div class="generated-value"><code id="password-output">Click generate</code><button data-copy-target="password-output">Copy</button></div><label class="range-label"><span>Length</span><b id="password-length-value">20</b></label><input type="range" id="password-length" min="8" max="64" value="20"><div class="option-row"><label><input type="checkbox" id="password-upper" checked> Uppercase</label><label><input type="checkbox" id="password-numbers" checked> Numbers</label><label><input type="checkbox" id="password-symbols" checked> Symbols</label></div><button class="primary wide" id="generate-password">Generate secure password</button></article><article class="card generator-card"><div class="card-head"><div><span class="eyebrow">DEVELOPER</span><h3>UUID generator</h3></div><span class="metric-icon blue">#</span></div><div class="generated-value"><code id="uuid-output">Click generate</code><button data-copy-target="uuid-output">Copy</button></div><p class="tool-description">Create standards-compliant UUID v4 identifiers using the system's cryptographic random source.</p><button class="primary wide" id="generate-uuid">Generate UUID v4</button></article><article class="card generator-card timestamp-card"><div class="card-head"><div><span class="eyebrow">TIME</span><h3>Unix timestamp converter</h3></div><span class="metric-icon green">◷</span></div><div class="live-time"><strong id="unix-now">—</strong><small>Current Unix timestamp</small></div><div class="input-row"><input id="timestamp-input" placeholder="Unix timestamp or date"><button class="secondary" id="convert-timestamp">Convert</button></div><div id="timestamp-result" class="result-box compact">Enter a timestamp or date.</div></article></div></section>
+
+      <section class="page" id="page-network"><div class="page-intro"><span class="eyebrow">CONNECTIVITY</span><h2>Network tools</h2><p>Inspect local adapters and resolve domain names.</p></div><div class="tool-grid"><article class="card"><div class="card-head"><h3>DNS lookup</h3><span class="metric-icon green">◎</span></div><div class="input-row"><input id="dns-host" value="example.com" placeholder="example.com"/><button class="primary" id="dns-lookup">Resolve</button></div><div id="dns-result" class="result-box">Enter a hostname to begin.</div></article><article class="card"><div class="card-head"><h3>Local adapters</h3><span class="metric-icon blue">⌁</span></div><div id="adapter-list" class="adapter-list"></div></article></div></section>
+
+      <section class="page" id="page-quick"><div class="page-intro"><span class="eyebrow">WINDOWS SHORTCUTS</span><h2>Quick actions</h2><p>Get to the places you use most, without digging through menus.</p></div><div class="action-grid"><button class="card action-card" data-win-action="settings"><span class="action-icon purple">⚙</span><div><strong>Windows Settings</strong><small>Open system settings</small></div><b>→</b></button><button class="card action-card" data-win-action="taskmgr"><span class="action-icon blue">▥</span><div><strong>Task Manager</strong><small>Inspect running processes</small></div><b>→</b></button><button class="card action-card" data-win-action="control"><span class="action-icon green">⊞</span><div><strong>Control Panel</strong><small>Classic Windows controls</small></div><b>→</b></button><button class="card action-card" data-win-action="downloads"><span class="action-icon orange">↓</span><div><strong>Downloads</strong><small>Open your downloads folder</small></div><b>→</b></button><button class="card action-card" data-win-action="temp"><span class="action-icon pink">◇</span><div><strong>Temporary files</strong><small>Open the temp directory</small></div><b>→</b></button><button class="card action-card" data-win-action="recycle"><span class="action-icon cyan">♲</span><div><strong>Recycle Bin</strong><small>Review recently deleted files</small></div><b>→</b></button></div></section>
+
+      <section class="page" id="page-settings"><div class="page-intro"><span class="eyebrow">CUSTOMIZE</span><h2>Preferences</h2><p>Make Winova feel at home on your PC.</p></div><div class="settings-list card"><div><div><strong>Dark appearance</strong><small>Winova is designed dark-first for comfortable daily use.</small></div><label class="switch"><input id="theme-toggle" type="checkbox" checked><span></span></label></div><div><div><strong>Automatic clipboard capture</strong><small>Watch for new text while the app is open.</small></div><label class="switch"><input id="clipboard-toggle" type="checkbox" checked><span></span></label></div><div><div><strong>Keep up to 25 clipboard items</strong><small>Older items are removed automatically.</small></div><span class="setting-value">25 items</span></div><div><div><strong>Local-first privacy</strong><small>Utility data is processed entirely on your machine.</small></div><span class="privacy-badge">✓ Enabled</span></div></div><article class="card update-card"><div><span class="eyebrow">SOFTWARE UPDATE</span><h3 id="update-title">Winova Toolkit is up to date</h3><p id="update-message">Updates are checked automatically after launch.</p></div><div class="update-actions"><span id="update-progress"></span><button class="secondary" id="update-check">Check for updates</button><button class="primary hidden" id="update-download">Download update</button><button class="primary hidden" id="update-install">Restart and install</button></div></article></section>
+    </main>
+  </div>
+  <div class="command-backdrop" id="command-backdrop">
+    <div class="command-menu" role="dialog" aria-modal="true" aria-label="Find a tool">
+      <div class="command-input"><span>⌕</span><input id="command-search" placeholder="Search tools and quick actions…" autocomplete="off"><kbd>Esc</kbd></div>
+      <div class="command-results" id="command-results"></div>
+      <div class="command-footer"><span>↑↓ Navigate</span><span>↵ Open</span><span>Ctrl K Quick search</span></div>
+    </div>
+  </div>
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
