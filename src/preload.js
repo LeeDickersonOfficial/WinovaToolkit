@@ -9,7 +9,7 @@ contextBridge.exposeInMainWorld('winova', {
   lookup: host => ipcRenderer.invoke('network:lookup', host),
   windowsAction: action => ipcRenderer.invoke('windows:action', action),
   openExternal: url => ipcRenderer.invoke('shell:openExternal', url),
-  setTheme: theme => ipcRenderer.invoke('theme:set', theme),
+  checksumFile: algorithm => ipcRenderer.invoke('file:checksum', algorithm),
   checkForUpdates: () => ipcRenderer.invoke('update:check'),
   downloadUpdate: () => ipcRenderer.invoke('update:download'),
   installUpdate: () => ipcRenderer.invoke('update:install'),

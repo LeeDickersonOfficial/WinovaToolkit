@@ -1,11 +1,12 @@
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const state = { system: null, history: JSON.parse(localStorage.getItem('winova-history') || '[]'), clipboardWatch: localStorage.getItem('clipboard-watch') !== 'false', lastClipboard: '' };
-const pageNames = { dashboard: ['WORKSPACE','Overview'], clipboard: ['PRODUCTIVITY','Clipboard'], text: ['WRITING TOOLS','Text studio'], developer: ['DEVELOPER UTILITIES','Developer toolbox'], generate: ['CREATE LOCALLY','Smart generators'], network: ['CONNECTIVITY','Network tools'], quick: ['WINDOWS SHORTCUTS','Quick actions'], settings: ['CUSTOMIZE','Preferences'] };
+const pageNames = { dashboard: ['WORKSPACE','Overview'], clipboard: ['PRODUCTIVITY','Clipboard'], text: ['WRITING TOOLS','Text studio'], developer: ['DEVELOPER UTILITIES','Developer toolbox'], generate: ['CREATE LOCALLY','Smart generators'], utilities: ['EVERYDAY TOOLS','Utility lab'], network: ['CONNECTIVITY','Network tools'], quick: ['WINDOWS SHORTCUTS','Quick actions'], settings: ['PREFERENCES','Preferences'] };
 
 function toast(message, error = false) { const el = $('#toast'); el.textContent = message; el.className = `toast show${error ? ' error' : ''}`; clearTimeout(toast.timer); toast.timer = setTimeout(() => el.className = 'toast', 2400); }
 function formatBytes(bytes) { if (!bytes) return '0 GB'; return `${(bytes / 1073741824).toFixed(1)} GB`; }
-function formatUptime(seconds) { const d=Math.floor(seconds/86400), h=Math.floor((seconds%86400)/3600), m=Math.floor((seconds%3600)/60); return d ? `${d}d ${h}h` : `${h}h ${m}m`; }
+function formatFileSize(bytes) { if (bytes < 1024) return `${bytes} B`; if (bytes < 1048576) return `${(bytes/1024).toFixed(1)} KB`; if (bytes < 1073741824) return `${(bytes/1048576).toFixed(1)} MB`; return `${(bytes/1073741824).toFixed(2)} GB`; }
+function formatUptime(seconds) { const d=Math.floor(seconds/86400), h=Math.floor((seconds%86400)/3600), m=Math.floor((seconds%3600)/60), s=Math.floor(seconds%60); return d ? `${d}d ${h}h ${m}m ${s}s` : `${h}h ${m}m ${s}s`; }
 function timeGreeting() { const h=new Date().getHours(); return h<12?'Good morning':h<18?'Good afternoon':'Good evening'; }
 function goTo(page) { $$('.page').forEach(x=>x.classList.toggle('active',x.id===`page-${page}`)); $$('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.page===page)); $('#page-kicker').textContent=pageNames[page][0]; $('#page-title').textContent=page==='dashboard'?timeGreeting():pageNames[page][1]; window.scrollTo({top:0,behavior:'smooth'}); }
 
@@ -31,14 +32,14 @@ $('#base64-encode').addEventListener('click',()=>{try{$('#base64-input').value=b
 $('#hash-generate').addEventListener('click',async()=>{try{$('#hash-output').textContent=await window.winova.hash($('#hash-input').value,$('#hash-algorithm').value);toast('Hash generated')}catch(e){toast(e.message,true)}});
 $('#dns-lookup').addEventListener('click',async()=>{const box=$('#dns-result');box.textContent='Resolving…';try{const r=await window.winova.lookup($('#dns-host').value);box.textContent=`${r.host}\n${r.addresses.map(x=>`${x.family}: ${x.address}`).join('\n')}\n\nResolved in ${r.elapsed} ms`}catch(e){box.textContent=`Lookup failed: ${e.message}`}});$('#dns-host').addEventListener('keydown',e=>{if(e.key==='Enter')$('#dns-lookup').click()});
 $$('[data-win-action]').forEach(b=>b.addEventListener('click',async()=>{try{await window.winova.windowsAction(b.dataset.winAction);toast('Opened successfully')}catch(e){toast(`Could not open: ${e.message}`,true)}}));
-$('#theme-toggle').addEventListener('change',e=>{document.body.classList.toggle('light',!e.target.checked);window.winova.setTheme(e.target.checked?'dark':'light');localStorage.setItem('theme',e.target.checked?'dark':'light')});$('#clipboard-toggle').addEventListener('change',e=>{state.clipboardWatch=e.target.checked;localStorage.setItem('clipboard-watch',String(e.target.checked))});
+$('#clipboard-toggle').addEventListener('change',e=>{state.clipboardWatch=e.target.checked;localStorage.setItem('clipboard-watch',String(e.target.checked))});
 
 function setUpdateState(status){
-  const title=$('#update-title'),message=$('#update-message'),progress=$('#update-progress'),check=$('#update-check'),download=$('#update-download'),install=$('#update-install');
-  check.classList.remove('hidden');download.classList.add('hidden');install.classList.add('hidden');progress.textContent='';check.disabled=false;
+  const title=$('#update-title'),message=$('#update-message'),progress=$('#update-progress'),check=$('#update-check'),download=$('#update-download'),install=$('#update-install'),notes=$('#update-notes'),notesContent=$('#update-notes-content');
+  check.classList.remove('hidden');download.classList.add('hidden');install.classList.add('hidden');notes.classList.add('hidden');progress.textContent='';check.disabled=false;
   if(status.status==='checking'){title.textContent='Checking for updates…';message.textContent='Contacting the Winova release service.';check.disabled=true}
   if(status.status==='current'){title.textContent='Winova Toolkit is up to date';message.textContent=`You have the latest version (${status.version}).`}
-  if(status.status==='available'){title.textContent=`Version ${status.version} is available`;message.textContent='A newer Winova Toolkit release is ready to download.';download.classList.remove('hidden');check.classList.add('hidden')}
+  if(status.status==='available'){title.textContent=`Version ${status.version} is available`;message.textContent='A newer Winova Toolkit release is ready to download.';notesContent.textContent=status.releaseNotes||'Release notes are unavailable.';notes.classList.remove('hidden');download.classList.remove('hidden');check.classList.add('hidden')}
   if(status.status==='downloading'){title.textContent='Downloading update…';message.textContent='You can continue using Winova while it downloads.';progress.textContent=`${status.percent||0}%`;check.classList.add('hidden')}
   if(status.status==='downloaded'){title.textContent=`Version ${status.version} is ready`;message.textContent='Restart Winova to finish installing the update.';install.classList.remove('hidden');check.classList.add('hidden')}
   if(status.status==='error'){title.textContent='Could not check for updates';message.textContent=status.message||'The release service could not be reached.'}
@@ -67,12 +68,27 @@ $$('[data-copy-target]').forEach(b=>b.addEventListener('click',async()=>{const v
 function updateUnixTime(){if(!document.hidden)$('#unix-now').textContent=Math.floor(Date.now()/1000)}
 $('#convert-timestamp').addEventListener('click',()=>{const value=$('#timestamp-input').value.trim();let date;if(/^\d{10,13}$/.test(value)){const numeric=Number(value);date=new Date(value.length===10?numeric*1000:numeric)}else{date=new Date(value)}$('#timestamp-result').textContent=Number.isNaN(date.getTime())?'Could not understand that date or timestamp.':`${date.toLocaleString()}\n${date.toISOString()}\nUnix: ${Math.floor(date.getTime()/1000)}`});
 
+$('#choose-checksum-file').addEventListener('click',async()=>{const box=$('#checksum-result');box.innerHTML='<span>Calculating checksum…</span>';try{const result=await window.winova.checksumFile($('#checksum-algorithm').value);if(!result){box.innerHTML='<span>No file selected</span>';return}box.innerHTML=`<div><strong>${escapeHtml(result.name)}</strong><small>${formatFileSize(result.size)} · ${result.algorithm.toUpperCase()}</small></div><code>${escapeHtml(result.digest)}</code><button id="copy-checksum">Copy</button>`;$('#copy-checksum').addEventListener('click',async()=>{await window.winova.writeClipboard(result.digest);toast('Checksum copied')})}catch(e){box.innerHTML=`<span>Could not inspect file: ${escapeHtml(e.message)}</span>`}});
+
+const unitSets={data:{units:['B','KB','MB','GB','TB'],toBase:{B:1,KB:1024,MB:1048576,GB:1073741824,TB:1099511627776}},length:{units:['mm','cm','m','km','in','ft','mi'],toBase:{mm:.001,cm:.01,m:1,km:1000,in:.0254,ft:.3048,mi:1609.344}},temperature:{units:['°C','°F','K']}};
+function rebuildUnits(){const category=$('#convert-category').value,set=unitSets[category],options=set.units.map(x=>`<option value="${x}">${x}</option>`).join('');$('#convert-from-unit').innerHTML=options;$('#convert-to-unit').innerHTML=options;$('#convert-to-unit').selectedIndex=1;convertUnits()}
+function convertUnits(){const category=$('#convert-category').value,value=Number($('#convert-from-value').value),from=$('#convert-from-unit').value,to=$('#convert-to-unit').value;if(!Number.isFinite(value)){$('#convert-to-value').value='';return}let result;if(category==='temperature'){const c=from==='°C'?value:from==='°F'?(value-32)*5/9:value-273.15;result=to==='°C'?c:to==='°F'?c*9/5+32:c+273.15}else{const set=unitSets[category];result=value*set.toBase[from]/set.toBase[to]}$('#convert-to-value').value=Number(result.toPrecision(10)).toString()}
+$('#convert-category').addEventListener('change',rebuildUnits);$('#convert-from-value').addEventListener('input',convertUnits);$('#convert-from-unit').addEventListener('change',convertUnits);$('#convert-to-unit').addEventListener('change',convertUnits);rebuildUnits();
+
+const clock={mode:'stopwatch',running:false,startedAt:0,elapsed:0,remaining:0,interval:null};
+function renderClock(ms){const safe=Math.max(0,ms),h=Math.floor(safe/3600000),m=Math.floor(safe%3600000/60000),s=Math.floor(safe%60000/1000),t=Math.floor(safe%1000/100);$('#clock-display').textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${t}`}
+function stopClock(){clock.running=false;clearInterval(clock.interval);clock.interval=null;$('#clock-start').textContent='Start'}
+function tickClock(){const passed=Date.now()-clock.startedAt;if(clock.mode==='stopwatch'){clock.elapsed+=passed;clock.startedAt=Date.now();renderClock(clock.elapsed)}else{clock.remaining-=passed;clock.startedAt=Date.now();renderClock(clock.remaining);if(clock.remaining<=0){stopClock();renderClock(0);toast('Timer complete')}}}
+$$('[data-clock-mode]').forEach(b=>b.addEventListener('click',()=>{stopClock();clock.mode=b.dataset.clockMode;clock.elapsed=0;clock.remaining=Number($('#timer-minutes').value)*60000;$$('[data-clock-mode]').forEach(x=>x.classList.toggle('active',x===b));$('#timer-setup').classList.toggle('hidden',clock.mode!=='timer');renderClock(clock.mode==='timer'?clock.remaining:0)}));
+$('#clock-start').addEventListener('click',()=>{if(clock.running){tickClock();stopClock();return}if(clock.mode==='timer'&&clock.remaining<=0)clock.remaining=Number($('#timer-minutes').value)*60000;clock.running=true;clock.startedAt=Date.now();$('#clock-start').textContent='Pause';clock.interval=setInterval(tickClock,100)});$('#clock-reset').addEventListener('click',()=>{stopClock();clock.elapsed=0;clock.remaining=Number($('#timer-minutes').value)*60000;renderClock(clock.mode==='timer'?clock.remaining:0)});$('#timer-minutes').addEventListener('input',()=>{if(!clock.running){clock.remaining=Number($('#timer-minutes').value)*60000;renderClock(clock.remaining)}});
+
 const commands = [
   { icon:'⌂', title:'Overview', detail:'System status and device details', page:'dashboard', group:'Page' },
   { icon:'▣', title:'Clipboard history', detail:'View and reuse recent clipboard text', page:'clipboard', group:'Tool' },
   { icon:'¶', title:'Text studio', detail:'Transform and analyze text', page:'text', group:'Tool' },
   { icon:'{ }', title:'JSON formatter', detail:'Format, validate, and minify JSON', page:'developer', group:'Tool' },
   { icon:'✦', title:'Smart generators', detail:'Passwords, UUIDs, and timestamps', page:'generate', group:'Tool' },
+  { icon:'◈', title:'Utility lab', detail:'Checksums, unit conversion, and timer', page:'utilities', group:'Tool' },
   { icon:'◎', title:'DNS lookup', detail:'Resolve a domain name', page:'network', group:'Tool' },
   { icon:'⚡', title:'Quick actions', detail:'Open useful Windows locations', page:'quick', group:'Page' },
   { icon:'⚙', title:'Windows Settings', detail:'Open system settings', action:'settings', group:'Action' },
@@ -107,8 +123,9 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Enter'){e.preventDefault();runCommand(filteredCommands[commandSelection])}
 });
 
-const isDark=localStorage.getItem('theme')!=='light';$('#theme-toggle').checked=isDark;document.body.classList.toggle('light',!isDark);$('#clipboard-toggle').checked=state.clipboardWatch;renderHistory();updateTextStats();updateUnixTime();refreshSystem();loadSystemDetails();pollClipboard();
+document.body.classList.remove('light');localStorage.removeItem('theme');$('#clipboard-toggle').checked=state.clipboardWatch;renderHistory();updateTextStats();updateUnixTime();refreshSystem();loadSystemDetails();pollClipboard();
 setInterval(()=>{if(!document.hidden&&$('#page-dashboard').classList.contains('active'))refreshSystem()},45000);
 setInterval(pollClipboard,3000);
 setInterval(updateUnixTime,1000);
+setInterval(()=>{if(state.system){state.system.uptime+=1;$('#uptime-value').textContent=formatUptime(state.system.uptime)}},1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){pollClipboard();updateUnixTime()}});

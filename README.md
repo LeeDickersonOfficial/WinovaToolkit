@@ -1,6 +1,6 @@
 # Winova Toolkit
 
-A dark-first Windows utility suite built with Electron. Winova combines system information, clipboard history, text transformations, developer utilities, secure generators, network diagnostics, and useful Windows shortcuts.
+A dark-only Windows utility suite built with Electron. Winova combines system information, clipboard history, text transformations, developer utilities, secure generators, file checksums, unit conversion, timers, network diagnostics, and useful Windows shortcuts.
 
 > Early preview: Winova currently uses `0.x` semantic versions while features and APIs are still evolving.
 
@@ -22,7 +22,7 @@ The installer, portable executable, blockmap, and `latest.yml` update manifest a
 ## Publishing an update
 
 1. Increment the version in `package.json` using semantic versioning.
-2. Commit and tag the release, for example `v0.1.18`.
+2. Commit and tag the release, for example `v0.1.19`.
 3. Build with `npm run dist`.
 4. Create a public GitHub Release for the tag.
 5. Upload the `Winova-Toolkit-Setup` executable, its blockmap, and `latest.yml`.

@@ -1,6 +1,7 @@
-const { app, BrowserWindow, ipcMain, clipboard, shell, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, shell, nativeTheme, dialog } = require('electron');
 const path = require('path');
 const os = require('os');
+const fs = require('fs');
 const dns = require('dns').promises;
 const crypto = require('crypto');
 const { execFile } = require('child_process');
@@ -18,8 +19,12 @@ function sendUpdateStatus(status, payload = {}) {
 function setupUpdater() {
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.fullChangelog = true;
   autoUpdater.on('checking-for-update', () => sendUpdateStatus('checking'));
-  autoUpdater.on('update-available', info => sendUpdateStatus('available', { version: info.version }));
+  autoUpdater.on('update-available', info => {
+    const rawNotes = Array.isArray(info.releaseNotes) ? info.releaseNotes.map(item => item.note).filter(Boolean).join('\n\n') : info.releaseNotes;
+    sendUpdateStatus('available', { version: info.version, releaseNotes: rawNotes || 'See the GitHub release page for details.' });
+  });
   autoUpdater.on('update-not-available', info => sendUpdateStatus('current', { version: info.version || app.getVersion() }));
   autoUpdater.on('download-progress', progress => sendUpdateStatus('downloading', { percent: Math.round(progress.percent) }));
   autoUpdater.on('update-downloaded', info => sendUpdateStatus('downloaded', { version: info.version }));
@@ -81,6 +86,22 @@ ipcMain.handle('system:details', async () => {
 
 ipcMain.handle('clipboard:read', () => clipboard.readText());
 ipcMain.handle('clipboard:write', (_event, text) => clipboard.writeText(String(text)));
+ipcMain.handle('file:checksum', async (_event, algorithm = 'sha256') => {
+  const allowed = ['sha256', 'sha512', 'md5'];
+  const safeAlgorithm = allowed.includes(algorithm) ? algorithm : 'sha256';
+  const result = await dialog.showOpenDialog(mainWindow, { properties: ['openFile'], title: 'Choose a file to inspect' });
+  if (result.canceled || !result.filePaths[0]) return null;
+  const filePath = result.filePaths[0];
+  const stat = await fs.promises.stat(filePath);
+  const digest = await new Promise((resolve, reject) => {
+    const hash = crypto.createHash(safeAlgorithm);
+    const stream = fs.createReadStream(filePath);
+    stream.on('error', reject);
+    stream.on('data', chunk => hash.update(chunk));
+    stream.on('end', () => resolve(hash.digest('hex')));
+  });
+  return { name: path.basename(filePath), path: filePath, size: stat.size, algorithm: safeAlgorithm, digest };
+});
 ipcMain.handle('utility:hash', (_event, { text, algorithm }) => {
   const allowed = ['md5', 'sha1', 'sha256', 'sha512'];
   const safeAlgorithm = allowed.includes(algorithm) ? algorithm : 'sha256';
@@ -127,7 +148,6 @@ ipcMain.handle('shell:openExternal', (_event, url) => {
   if (!['https:', 'http:'].includes(parsed.protocol)) throw new Error('Unsupported URL');
   return shell.openExternal(parsed.toString());
 });
-ipcMain.handle('theme:set', (_event, theme) => { nativeTheme.themeSource = theme === 'light' ? 'light' : 'dark'; });
 ipcMain.handle('update:check', async () => {
   if (!app.isPackaged) return { development: true, version: app.getVersion() };
   await autoUpdater.checkForUpdates();
@@ -137,6 +157,7 @@ ipcMain.handle('update:download', async () => { await autoUpdater.downloadUpdate
 ipcMain.handle('update:install', () => { setImmediate(() => autoUpdater.quitAndInstall(false, true)); return true; });
 
 app.whenReady().then(() => {
+  nativeTheme.themeSource = 'dark';
   setupUpdater();
   createWindow();
   setTimeout(() => { if (app.isPackaged) autoUpdater.checkForUpdates().catch(() => {}); }, 10000);
