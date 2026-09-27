@@ -52,6 +52,7 @@ function createWindow() {
     minWidth: 1060,
     minHeight: 700,
     backgroundColor: '#090b10',
+    icon: path.join(__dirname, '..', 'build', 'icon.png'),
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#090b10', symbolColor: '#aeb5c4', height: 44 },
     show: false,
@@ -114,7 +115,11 @@ function requestNetworkService(action, name = '', enabled = false) {
       try {
         const result = JSON.parse(response.split('\n')[0]);
         const ok = result.Ok ?? result.ok;
-        if (!ok) throw new Error(result.Error || result.error || 'The network service rejected the request');
+        if (!ok) {
+          const serviceError = new Error(result.Error || result.error || 'The network service rejected the request');
+          serviceError.networkServiceRejected = true;
+          throw serviceError;
+        }
         finish(null, result);
       } catch (error) { finish(error); }
     });
@@ -132,10 +137,20 @@ async function pingHost(target) {
 }
 
 async function verifyAdapterState(name, enabled) {
+  let consecutiveMissing = 0;
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const current = (await windowsNetworkAdapters()).find(item => item.name === name);
-    const isEnabled = current && String(current.status).toLowerCase() !== 'disabled';
-    if (Boolean(isEnabled) === enabled) return current;
+    if (!current) {
+      consecutiveMissing += 1;
+      // Some virtual adapters, including Tailscale, disappear from netsh output
+      // as soon as they are disabled. Confirm the disappearance twice before
+      // treating it as the expected disabled state.
+      if (!enabled && consecutiveMissing >= 2) return { name, status: 'Disabled' };
+    } else {
+      consecutiveMissing = 0;
+      const isEnabled = String(current.status).toLowerCase() !== 'disabled';
+      if (isEnabled === enabled) return current;
+    }
     await new Promise(resolve => setTimeout(resolve, 350));
   }
   throw new Error('Windows did not confirm the adapter state');
@@ -156,8 +171,27 @@ ipcMain.handle('system:snapshot', async () => ({
 }));
 ipcMain.handle('system:details', async () => {
   if (cachedDeviceDetails) return cachedDeviceDetails;
-  const script = `$cs=Get-CimInstance Win32_ComputerSystem;$os=Get-CimInstance Win32_OperatingSystem;$bios=Get-CimInstance Win32_BIOS;$gpu=Get-CimInstance Win32_VideoController|Select-Object -First 1;$board=Get-CimInstance Win32_BaseBoard|Select-Object -First 1;$cv=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion';$displayVersion=if($cv.DisplayVersion){$cv.DisplayVersion}else{$cv.ReleaseId};$fullBuild=if($cv.UBR -ne $null){$os.BuildNumber+'.'+$cv.UBR}else{$os.BuildNumber};$disks=Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3"|ForEach-Object {@{name=$_.DeviceID;label=$_.VolumeName;size=[double]$_.Size;free=[double]$_.FreeSpace}};@{manufacturer=$cs.Manufacturer;model=$cs.Model;systemType=$cs.SystemType;hypervisor=[bool]$cs.HypervisorPresent;windows=$os.Caption;edition=$cv.EditionID;displayVersion=$displayVersion;build=$fullBuild;osVersion=$os.Version;installed=$os.InstallDate.ToString('o');lastBoot=$os.LastBootUpTime.ToString('o');serial=$bios.SerialNumber;bios=$bios.SMBIOSBIOSVersion;biosDate=if($bios.ReleaseDate){$bios.ReleaseDate.ToString('o')}else{$null};board=($board.Manufacturer+' '+$board.Product).Trim();gpu=$gpu.Name;gpuMemory=[double]$gpu.AdapterRAM;disks=@($disks)}|ConvertTo-Json -Depth 4 -Compress`;
+  const script = `$cv=Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion';$br=Get-ItemProperty 'HKLM:\\HARDWARE\\DESCRIPTION\\System\\BIOS';$cs=try{Get-CimInstance Win32_ComputerSystem -ErrorAction Stop}catch{$null};$os=try{Get-CimInstance Win32_OperatingSystem -ErrorAction Stop}catch{$null};$bios=try{Get-CimInstance Win32_BIOS -ErrorAction Stop}catch{$null};$gpu=try{Get-CimInstance Win32_VideoController -ErrorAction Stop|Select-Object -First 1}catch{$null};$board=try{Get-CimInstance Win32_BaseBoard -ErrorAction Stop|Select-Object -First 1}catch{$null};$buildNumber=[int]$cv.CurrentBuildNumber;$productName=$cv.ProductName;if($buildNumber-ge 22000){$productName=$productName-replace 'Windows 10','Windows 11'};$displayVersion=if($cv.DisplayVersion){$cv.DisplayVersion}else{$cv.ReleaseId};$fullBuild=$cv.CurrentBuildNumber+'.'+$cv.UBR;$installed=if($os){$os.InstallDate.ToString('o')}elseif($cv.InstallDate){[DateTimeOffset]::FromUnixTimeSeconds([long]$cv.InstallDate).LocalDateTime.ToString('o')}else{$null};$disks=Get-PSDrive -PSProvider FileSystem|Where-Object {$_.Root -and $_.Used -ne $null -and $_.Free -ne $null}|ForEach-Object {@{name=$_.Name+':';label='Local disk';size=[double]($_.Used+$_.Free);free=[double]$_.Free}};@{manufacturer=if($cs){$cs.Manufacturer}else{$br.SystemManufacturer};model=if($cs){$cs.Model}else{$br.SystemProductName};systemType=if($cs){$cs.SystemType}else{$env:PROCESSOR_ARCHITECTURE};hypervisor=if($cs){[bool]$cs.HypervisorPresent}else{$false};windows=if($os){$os.Caption}else{$productName};edition=$cv.EditionID;displayVersion=$displayVersion;build=$fullBuild;osVersion=if($os){$os.Version}else{$cv.CurrentVersion};installed=$installed;lastBoot=if($os){$os.LastBootUpTime.ToString('o')}else{$null};serial=if($bios){$bios.SerialNumber}else{$br.SystemSerialNumber};bios=if($bios){$bios.SMBIOSBIOSVersion}else{[string]$br.BIOSVersion};biosDate=if($bios.ReleaseDate){$bios.ReleaseDate.ToString('o')}else{$br.BIOSReleaseDate};board=if($board){($board.Manufacturer+' '+$board.Product).Trim()}else{($br.BaseBoardManufacturer+' '+$br.BaseBoardProduct).Trim()};gpu=if($gpu){$gpu.Name}else{$null};gpuMemory=if($gpu){[double]$gpu.AdapterRAM}else{0};disks=@($disks)}|ConvertTo-Json -Depth 4 -Compress`;
   cachedDeviceDetails = JSON.parse(await runPowerShell(script));
+  const nativeDisks = await Promise.all('CDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(async letter => {
+    try {
+      const root = `${letter}:\\`;
+      const { stdout: driveType } = await execFileAsync('fsutil.exe', ['fsinfo', 'drivetype', `${letter}:`], { windowsHide: true, timeout: 3000 });
+      if (!/Fixed Drive/i.test(driveType)) return null;
+      const stats = await fs.promises.statfs(root);
+      const size = Number(stats.blocks) * Number(stats.bsize);
+      const free = Number(stats.bavail) * Number(stats.bsize);
+      return size > 0 ? { name: `${letter}:`, label: 'Local disk', size, free } : null;
+    } catch { return null; }
+  }));
+  cachedDeviceDetails.disks = nativeDisks.filter(Boolean);
+  if (!cachedDeviceDetails.serial) {
+    try {
+      const identity = await requestNetworkService('getDeviceIdentity');
+      const privileged = JSON.parse(identity.Data || identity.data || '{}');
+      if (privileged.serial) cachedDeviceDetails.serial = privileged.serial;
+    } catch { /* Portable builds may not have the optional installed service. */ }
+  }
   return cachedDeviceDetails;
 });
 ipcMain.handle('network:adapters', async () => {
@@ -196,14 +230,18 @@ ipcMain.handle('network:toggle-adapter', async (_event, { name, enabled }) => {
   if (!selected) throw new Error('Network adapter was not found');
   try {
     await requestNetworkService('setAdapterState', selected.name, Boolean(enabled));
-  } catch {
+    // The installed LocalSystem service uses the native NetAdapter API and
+    // only returns after Windows accepts the administrative state change.
+    return { verified: true, status: enabled ? 'Enabled' : 'Disabled' };
+  } catch (error) {
+    if (error.networkServiceRejected) throw error;
     const safeName = selected.name.replace(/'/g, "''");
     const adminState = enabled ? 'enabled' : 'disabled';
     const outer = `$p=Start-Process netsh.exe -Verb RunAs -WindowStyle Hidden -ArgumentList @('interface','set','interface','name="${safeName}"','admin=${adminState}') -Wait -PassThru;if($p.ExitCode -ne 0){throw 'Windows did not apply the adapter change'}`;
     await runPowerShell(outer, 60000);
   }
   const current = await verifyAdapterState(selected.name, Boolean(enabled));
-  return { verified: true, status: current.status };
+  return { verified: true, status: current?.status || (enabled ? 'Enabled' : 'Disabled') };
 });
 
 ipcMain.handle('clipboard:read', () => clipboard.readText());
@@ -243,8 +281,12 @@ ipcMain.handle('windows:action', async (_event, action) => {
     if (error) throw new Error(error);
     return true;
   }
-  if (action === 'settings') {
-    await shell.openExternal('ms-settings:');
+  const settingsPages = {
+    settings: 'ms-settings:',
+    windowsupdate: 'ms-settings:windowsupdate'
+  };
+  if (settingsPages[action]) {
+    await shell.openExternal(settingsPages[action]);
     return true;
   }
   if (action === 'recycle') {
@@ -258,7 +300,12 @@ ipcMain.handle('windows:action', async (_event, action) => {
   }
   const systemRoot = process.env.SystemRoot || 'C:\\Windows';
   const systemApps = {
-    control: path.join(systemRoot, 'System32', 'control.exe')
+    control: path.join(systemRoot, 'System32', 'control.exe'),
+    devicemanager: path.join(systemRoot, 'System32', 'devmgmt.msc'),
+    diskmanagement: path.join(systemRoot, 'System32', 'diskmgmt.msc'),
+    services: path.join(systemRoot, 'System32', 'services.msc'),
+    eventviewer: path.join(systemRoot, 'System32', 'eventvwr.msc'),
+    systeminfo: path.join(systemRoot, 'System32', 'msinfo32.exe')
   };
   if (!systemApps[action]) throw new Error('Unknown action');
   const error = await shell.openPath(systemApps[action]);

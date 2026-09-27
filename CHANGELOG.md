@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.1.23
+
+- Expanded Quick Actions with Windows Update, Device Manager, Disk Management, Services, Event Viewer, and System Information.
+- Added every new Windows shortcut to the Ctrl+K command palette.
+- Added the purple Winova “W” as the executable, installer, shortcut, taskbar, and window icon.
+- Fixed Windows edition, feature release, and build information when Windows blocks CIM/WMI access.
+- Made device information resilient so one unavailable hardware source no longer blanks the entire Overview.
+- Added a protected installed-service fallback for reading the device serial number.
+- Updated every time-based greeting to use consistent capitalization, punctuation, and a waving-hand emoji.
+- Fixed escaped Windows registry paths so the feature version and complete OS build render correctly.
+- Fixed disabling virtual adapters such as Tailscale when Windows removes them from the adapter list immediately.
+- Switched privileged adapter toggles to Windows' native NetAdapter cmdlets so virtual adapters do not report false `netsh` success.
+
 ## v0.1.22
 
 - Added a clear MAC Address label to every network adapter.

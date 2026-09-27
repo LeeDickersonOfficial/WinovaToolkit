@@ -1,6 +1,6 @@
 {
   "name": "winova-toolkit",
-  "version": "0.1.22",
+  "version": "0.1.23",
   "description": "A modern, privacy-first Windows toolkit for system insights, network diagnostics, productivity utilities, and everyday PC maintenance.",
   "main": "src/main.js",
   "author": "Winova",
@@ -26,10 +26,10 @@
     "appId": "com.winova.toolkit",
     "productName": "Winova Toolkit",
     "directories": { "output": "release" },
-    "files": ["src/**/*", "package.json"],
+    "files": ["src/**/*", "build/icon.png", "package.json"],
     "extraResources": [{ "from": "service/publish/Winova.NetworkService.exe", "to": "service/Winova.NetworkService.exe" }],
     "publish": [{ "provider": "github", "owner": "LeeDickersonOfficial", "repo": "WinovaToolkit", "releaseType": "release" }],
-    "win": { "target": ["nsis", "portable"] },
+    "win": { "target": ["nsis", "portable"], "icon": "build/icon.ico" },
     "nsis": { "artifactName": "Winova-Toolkit-Setup-${version}-${arch}.${ext}", "uninstallDisplayName": "Winova Toolkit", "oneClick": false, "perMachine": true, "allowElevation": true, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true, "include": "build/installer.nsh" },
     "portable": { "artifactName": "Winova-Toolkit-Portable-${version}-${arch}.${ext}" }
   }

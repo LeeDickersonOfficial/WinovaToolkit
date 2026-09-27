@@ -121,12 +121,20 @@ internal sealed class NetworkService : ServiceBase
         try
         {
             var request = JsonSerializer.Deserialize(input, ServiceJsonContext.Default.Request);
-            if (request is null || request.Action is not ("getStatus" or "setAdapterState" or "restartAdapter" or "flushDns" or "renewDhcp"))
+            if (request is null || request.Action is not ("getStatus" or "getDeviceIdentity" or "setAdapterState" or "restartAdapter" or "flushDns" or "renewDhcp"))
                 throw new InvalidOperationException("Unsupported request");
 
             if (request.Action == "getStatus")
             {
                 await writer.WriteLineAsync(JsonSerializer.Serialize(new Response(true, null, typeof(Program).Assembly.GetName().Version?.ToString(3)), ServiceJsonContext.Default.Response));
+                return;
+            }
+            if (request.Action == "getDeviceIdentity")
+            {
+                const string identityScript = "$bios=Get-CimInstance Win32_BIOS -ErrorAction Stop|Select-Object -First 1;@{serial=$bios.SerialNumber}|ConvertTo-Json -Compress";
+                var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(identityScript));
+                var data = await RunCommandCaptureAsync("WindowsPowerShell\\v1.0\\powershell.exe", ["-NoProfile", "-NonInteractive", "-EncodedCommand", encoded], token);
+                await writer.WriteLineAsync(JsonSerializer.Serialize(new Response(true, null, null, data.Trim()), ServiceJsonContext.Default.Response));
                 return;
             }
 
@@ -155,8 +163,40 @@ internal sealed class NetworkService : ServiceBase
         }
     }
 
-    private static Task SetAdapterStateAsync(string name, bool enabled, CancellationToken token) =>
-        RunCommandAsync("netsh.exe", ["interface", "set", "interface", $"name={name}", $"admin={(enabled ? "enabled" : "disabled")}"], token);
+    private static async Task SetAdapterStateAsync(string name, bool enabled, CancellationToken token)
+    {
+        // netsh can report success without changing the administrative state of
+        // virtual adapters such as Tailscale. The NetAdapter cmdlets use the
+        // native Windows adapter-management API and reliably handle both
+        // physical and virtual adapters.
+        const string script = "$adapter=Get-NetAdapter -Name $env:WINOVA_ADAPTER_NAME -IncludeHidden -ErrorAction Stop;"
+            + "if($env:WINOVA_ADAPTER_ENABLED -eq 'true'){$adapter|Enable-NetAdapter -Confirm:$false -ErrorAction Stop}"
+            + "else{$adapter|Disable-NetAdapter -Confirm:$false -ErrorAction Stop}";
+        var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
+        var executable = Path.Combine(Environment.SystemDirectory, "WindowsPowerShell\\v1.0\\powershell.exe");
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = executable,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            }
+        };
+        process.StartInfo.Environment["WINOVA_ADAPTER_NAME"] = name;
+        process.StartInfo.Environment["WINOVA_ADAPTER_ENABLED"] = enabled ? "true" : "false";
+        foreach (var argument in new[] { "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded })
+            process.StartInfo.ArgumentList.Add(argument);
+        process.Start();
+        var error = await process.StandardError.ReadToEndAsync(token);
+        await process.WaitForExitAsync(token);
+        if (process.ExitCode != 0)
+            throw new InvalidOperationException(string.IsNullOrWhiteSpace(error)
+                ? "Windows did not change the network adapter state"
+                : "Windows could not change this network adapter state");
+    }
 
     private static async Task RunCommandAsync(string executable, string[] arguments, CancellationToken token)
     {
@@ -165,6 +205,17 @@ internal sealed class NetworkService : ServiceBase
         process.Start();
         await process.WaitForExitAsync(token);
         if (process.ExitCode != 0) throw new InvalidOperationException("Windows did not complete the requested network action");
+    }
+
+    private static async Task<string> RunCommandCaptureAsync(string executable, string[] arguments, CancellationToken token)
+    {
+        var process = new Process { StartInfo = new ProcessStartInfo { FileName = Path.Combine(Environment.SystemDirectory, executable), UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true } };
+        foreach (var argument in arguments) process.StartInfo.ArgumentList.Add(argument);
+        process.Start();
+        var output = await process.StandardOutput.ReadToEndAsync(token);
+        await process.WaitForExitAsync(token);
+        if (process.ExitCode != 0) throw new InvalidOperationException("Windows device information is unavailable");
+        return output;
     }
 
     private static async Task<HashSet<string>> ReadAdapterNamesAsync(CancellationToken token)
@@ -213,7 +264,7 @@ internal sealed class NetworkService : ServiceBase
 }
 
 internal sealed record Request(string Action, string Name, bool Enabled);
-internal sealed record Response(bool Ok, string? Error, string? Version = null);
+internal sealed record Response(bool Ok, string? Error, string? Version = null, string? Data = null);
 
 [JsonSerializable(typeof(Request))]
 [JsonSerializable(typeof(Response))]
